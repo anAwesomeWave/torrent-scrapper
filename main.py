@@ -3,6 +3,13 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 
+import logging
+
+# simple logger
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+log.addHandler(logging.FileHandler('image.log'))
+
 
 #url = 'https://rutracker.org/forum/tracker.php?nm=peaky%20blinders%202'
 
@@ -30,16 +37,24 @@ values = {
 
 }
 
-
-r = requests.post(login_url, data=values, allow_redirects=False)
-
+try:
+    r = requests.post(login_url, data=values, allow_redirects=False)
+except requests.exceptions.ConnectionError:
+    log.info('CANNOT LOG-IN: connection error')
+    sys.exit()
 
 soup = BeautifulSoup(r.content, 'html.parser')
 
 
 for c in r.cookies:
     print(c.name, c.value)
+user_input = 'peaky%20blinders%202'  # base64
 
-print(BeautifulSoup(requests.get('https://rutracker.org/forum/tracker.php?nm=peaky%20blinders%202', cookies=r.cookies).content, 'html.parser').prettify())
+# get all matches from rutracker
+# pass cookie to authenticate
+user_request = requests.get(f'https://rutracker.org/forum/tracker.php?nm={user_input}', cookies=r.cookies).content
 
+soup = BeautifulSoup(user_request, 'html.parser') #  .prettify()
 
+container = soup.find('div', {"id": "search-results"})
+print(container.prettify())
