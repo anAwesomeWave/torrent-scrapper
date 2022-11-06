@@ -5,14 +5,12 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 
-from re import sub
-
 import logging
 
 # simple logger
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
-log.addHandler(logging.FileHandler('image.log'))
+log.addHandler(logging.FileHandler('logger.log'))
 
 
 def get_all_torrents(cont): # return list of dicts
@@ -20,11 +18,26 @@ def get_all_torrents(cont): # return list of dicts
     for i in cont.find_all('tr'):
         d = dict()
 
+
         # for i in [('is_approved','find_all('td', {'class': 'row1 t-ico'})[1]['title']')]
         # TODO: может сработать для всего, кроме is_approved (цикл для всех остальных соответственно, переписать)
+
+
+        try:
+            d['link'] = 'https://rutracker.org/forum/dl.php?t=' + i['data-topic_id']
+        except Exception as e:
+            logging.error('forum-LINK - ' + traceback.format_exc())
+            log.info('forum-LINK - ' + traceback.format_exc())
+            d['link'] = None
+
+        # if we can't get link we skip all next info about file
+        if d['link'] is None:
+            continue
+
+
         # approved or not
         try:
-            d['is_approved'] = i.find_all('td', {'class': 'row1 t-ico'})[1]['title'] # or 'status'
+            d['is_approved'] = i.find_all('td', {'class': 'row1 t-ico'})[1]['title']  # or 'status'
         except Exception as e:
             logging.error("is_approved-DICT - " + traceback.format_exc())
             log.info("is_approved-DICT - " + traceback.format_exc())
@@ -37,13 +50,6 @@ def get_all_torrents(cont): # return list of dicts
             logging.error('forum-DICT - ' + traceback.format_exc())
             log.info('forum-DICT - ' + traceback.format_exc())
             d['forum'] = None
-
-        # filename
-        # хочу брать весь текст
-        # включая возмодные теги span
-        # а потом, все, что в <> удалять с помощью regex возможно или циклом просто
-        # sub(r'<[^<>]*>', str)
-        # по итогу не пришлось даже)
 
         try:
             #d['filename'] = i.find('td', {'class': 'row4 med tLeft t-title-col tt'}).find('a').string
@@ -101,9 +107,16 @@ def get_all_torrents(cont): # return list of dicts
             log.info('forum-DATE - ' + traceback.format_exc())
             d['date'] = None
         arr.append(d)
-    print(arr)
     return arr
 
+
+def download_file(file, cookies):
+    r = requests.get(file['link'], cookies=cookies)
+    filename = ""
+    for i in file['filename']:
+        if not i in '/.\\':
+            filename += i
+    open(f'./{filename}.torrent', 'wb').write(r.content)
 
 
 login_url = 'https://rutracker.org/forum/login.php'
@@ -125,6 +138,8 @@ try:
     r = requests.post(login_url, data=values, allow_redirects=False)
 except requests.exceptions.ConnectionError:
     log.info('CANNOT LOG-IN: connection error')
+    log.info(requests.exceptions.ConnectionError)
+    print('CANNOT LOG-IN: connection error')
     sys.exit()
 
 # for c in r.cookies:
@@ -138,16 +153,20 @@ user_request = requests.get(f'https://rutracker.org/forum/tracker.php?nm={user_i
 soup = BeautifulSoup(user_request, 'html.parser')  # .prettify()
 
 container = soup.find('div', {"id": "search-results"}).find('tbody')
-all_torrents = get_all_torrents(container)  # list of dicts (all torents)
-# name, size, link, date, author, seeds, leechers
+all_torrents = get_all_torrents(container)  # list of dicts (all torrents)
+# name, size, link, date, author, seeds, leeches
 
 # TODO: iterate through all pages
 # class bottom_info -> class nav -> class pg-jump-menu -> find_all('a' class pg)
 # request к каждой
 
+for i in all_torrents:
+    print(i)
 
-#print(container.prettify())
+torrent_index = int(input())
 
+if torrent_index > 0 and torrent_index < len(all_torrents):
+    download_file(all_torrents[torrent_index], r.cookies)
 
 # мб завернуть все в класс и сделать функции
 # типа api

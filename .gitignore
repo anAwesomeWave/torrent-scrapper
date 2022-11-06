@@ -1,4 +1,3 @@
-keys.txt
-.*/
-image.log
-test.py
+*
+!main.py
+!.gitignore
