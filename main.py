@@ -13,6 +13,7 @@ log.setLevel(logging.INFO)
 log.addHandler(logging.FileHandler('logger.log'))
 
 
+# cont -> tbody
 def get_all_torrents(cont): # return list of dicts
     arr = []
     for i in cont.find_all('tr'):
@@ -144,7 +145,7 @@ except requests.exceptions.ConnectionError:
 
 # for c in r.cookies:
 #     print(c.name, c.value)
-user_input = urllib.parse.quote("peaky blinders 2")  # Percent-encoding
+user_input = urllib.parse.quote("leon")  # Percent-encoding
 
 # get all matches from rutracker
 # pass cookie to authenticate
@@ -159,7 +160,18 @@ all_torrents = get_all_torrents(container)  # list of dicts (all torrents)
 # TODO: iterate through all pages
 # class bottom_info -> class nav -> class pg-jump-menu -> find_all('a' class pg)
 # request к каждой
-
+# get all other pages with torrents
+other_pages = soup.find('div', {'class': 'bottom_info'}).find_all('p')[1].find_all('a')[1:-1:]
+if len(other_pages) == 0:
+    print("0")
+else:
+    # for each element in a list ('a' tag) grab it's 'href' attribute and make request to its value
+    for i in other_pages:
+        new_url = href="https://rutracker.org/forum/" + i['href']
+        print(new_url)
+        new_req = requests.get(new_url, cookies=r.cookies).content
+        new_soup = BeautifulSoup(user_request, 'html.parser')
+        all_torrents.extend(get_all_torrents(new_soup.find('div', {"id": "search-results"}).find('tbody')))
 for i in all_torrents:
     print(i)
 
