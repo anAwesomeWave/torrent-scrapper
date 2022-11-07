@@ -22,7 +22,14 @@ def get_all_torrents(cont): # return list of dicts
 
         # for i in [('is_approved','find_all('td', {'class': 'row1 t-ico'})[1]['title']')]
         # TODO: может сработать для всего, кроме is_approved (цикл для всех остальных соответственно, переписать)
-
+        for k in [('forum', '.row1.f-name-col'), ('filename', '.row4.med.tLeft.t-title-col.tt'),
+                  ('author', '.row1.u-name-col'), ('size', '.row4.small.nowrap.tor-size')]:
+            try:
+                d[k[0]] = i.select(k[1])[0].find('a').string  # by css selector
+            except Exception as e:
+                logging.error('forum-DICT - ' + traceback.format_exc())
+                log.info('forum-DICT - ' + traceback.format_exc())
+                d[k[0]] = None
 
         try:
             d['link'] = 'https://rutracker.org/forum/dl.php?t=' + i['data-topic_id']
@@ -44,48 +51,16 @@ def get_all_torrents(cont): # return list of dicts
             log.info("is_approved-DICT - " + traceback.format_exc())
             d['is_approved'] = None
 
-        # forum
-        try:
-            d['forum'] = i.select('.row1.f-name-col')[0].find('a').string # by css selector
-        except Exception as e:
-            logging.error('forum-DICT - ' + traceback.format_exc())
-            log.info('forum-DICT - ' + traceback.format_exc())
-            d['forum'] = None
-
-        try:
-            #d['filename'] = i.find('td', {'class': 'row4 med tLeft t-title-col tt'}).find('a').string
-            d['filename'] = i.select('.row4.med.tLeft.t-title-col.tt')[0].find('a').string
-        except Exception as e:
-            logging.error('forum-FILENAME - ' + traceback.format_exc())
-            log.info('forum-FILENAME - ' + traceback.format_exc())
-            d['filename'] = None
-
-        # author
-        try:
-            d['author'] = i.select('.row1.u-name-col')[0].find('a').string
-        except Exception as e:
-            logging.error('forum-AUTHOR - ' + traceback.format_exc())
-            log.info('forum-AUTHOR - ' + traceback.format_exc())
-            d['author'] = None
-
-        # size TODO: убрать лишнее из строки
-        try:
-            d['size'] = i.select(".row4.small.nowrap.tor-size")[0].find('a').string
-        except Exception as e:
-            logging.error('forum-SIZE - ' + traceback.format_exc())
-            log.info('forum-SIZE - ' + traceback.format_exc())
-            d['size'] = None
 
         # seeds
         try:
-            # d['seeds'] = i.select('.row4.nowrap')[1].find('b').string
             d['seeds'] = i.find('b').string
         except Exception as e:
             logging.error('forum-SEEDS - ' + traceback.format_exc())
             log.info('forum-SEEDS - ' + traceback.format_exc())
             d['seeds'] = None
 
-        # leeches
+        # leeches  HERE
         try:
             d['leeches'] = i.select('.row4.leechmed.bold')[0].string
         except Exception as e:
@@ -93,7 +68,7 @@ def get_all_torrents(cont): # return list of dicts
             log.info('forum-LEECHES - ' + traceback.format_exc())
             d['leeches'] = None
 
-        # downloads
+        # downloads  HERE
         try:
             d['downloads'] = i.select('.row4.small.number-format')[0].string
         except Exception as e:
@@ -165,19 +140,20 @@ other_pages = soup.find('div', {'class': 'bottom_info'}).find_all('p')[1].find_a
 if len(other_pages) == 0:
     print("0")
 else:
+    pass
     # for each element in a list ('a' tag) grab it's 'href' attribute and make request to its value
-    for i in other_pages:
-        new_url = href="https://rutracker.org/forum/" + i['href']
-        print(new_url)
-        new_req = requests.get(new_url, cookies=r.cookies).content
-        new_soup = BeautifulSoup(user_request, 'html.parser')
-        all_torrents.extend(get_all_torrents(new_soup.find('div', {"id": "search-results"}).find('tbody')))
+    # for i in other_pages:
+    #     new_url = "https://rutracker.org/forum/" + i['href']
+    #     print(new_url)
+    #     new_req = requests.get(new_url, cookies=r.cookies).content
+    #     new_soup = BeautifulSoup(user_request, 'html.parser')
+    #     all_torrents.extend(get_all_torrents(new_soup.find('div', {"id": "search-results"}).find('tbody')))
 for i in all_torrents:
     print(i)
 
 torrent_index = int(input())
 
-if torrent_index > 0 and torrent_index < len(all_torrents):
+if 0 < torrent_index < len(all_torrents):
     download_file(all_torrents[torrent_index], r.cookies)
 
 # мб завернуть все в класс и сделать функции
